@@ -20,12 +20,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up JDK 11
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Setup JDK
       uses: actions/setup-java@v3
       with:
-        java-version: '11'
-        distribution: 'temurin'
-        cache: 'sbt'
-    - name: Run tests
-      run: sbt run
+        distribution: temurin
+        java-version: 8
+    - name: Build and Test
+      run: sbt "run 0"
