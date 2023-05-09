@@ -28,8 +28,9 @@ jobs:
           distribution: temurin
           java-version: 8
       - name: Create JSON
-        run: sbt "run ${{ vars.JAM_URL }} ${{ vars.LESS_THAN_DAYS }} ${{ vars.END_DATE }}"
+        id: json
+        run: sbt "run ${{ secrets.JAM_URL }} ${{ secrets.LESS_THAN_DAYS }} ${{ secrets.END_DATE }}"
       - uses: actions/upload-artifact@v3
         with:
           name: JSON results for game Jams
-          path: /gameJams.json
+          path: ${{ steps.json.outputs }}
