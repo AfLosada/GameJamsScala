@@ -30,6 +30,8 @@ jobs:
       - name: Create JSON
         id: json
         run: sbt "run ${{ secrets.JAM_URL }} ${{ secrets.LESS_THAN_DAYS }} ${{ secrets.END_DATE }}"
+      - name: Run
+        run: ls
       - uses: actions/upload-artifact@v3
         with:
           name: JSON results for game Jams
