@@ -35,5 +35,5 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: JSON results for game Jams
-          path: /GameJamsScala/gameJams.json
+          path: gameJams.json
 
