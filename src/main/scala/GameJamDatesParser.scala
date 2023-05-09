@@ -1,39 +1,40 @@
-import scala.io.Source
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.json4s.*
-import org.json4s.jackson.JsonMethods.*
 import org.json4s.JsonDSL.WithDouble.*
+import org.json4s.jackson.JsonMethods.*
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization.{read, write}
 
-import java.time.Instant
-import java.time.Duration
-import java.time.LocalDate
+import java.text.SimpleDateFormat
+import java.time.*
 import java.time.format.DateTimeFormatter.*
+import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder, DateTimeParseException}
+import java.time.temporal.ChronoField
+import java.util.Date
+import scala.annotation.targetName
+import scala.io.Source
 
-val demoJSON =
-  """
-    |[{
-    |    "dtstart": "20230501T170000Z",
-    |    "dtend": "20230515T170000Z",
-    |    "dtstamp": "20230505T001554Z",
-    |    "uid": "uglbnt7end1at48vi768v30mvk@google.com",
-    |    "created": "20230503T232217Z",
-    |    "description": "https:\/\/itch.io\/jam\/2d-platform-action-game-ss2\n\n2D Side-Scrolling Jam powered by School of Interactive Design and Game Development, College of Creative Design and Entertainment Technology, Dhurakij Pundit University. Come to Join and you make a game or playable prototype with Any Game Engines.\n\nThe online event is open to everyone, from experienced professionals to absolute newbies. :)\n",
-    |    "last-modified": "20230503T232217Z",
-    |    "location": "",
-    |    "sequence": "0",
-    |    "status": "CONFIRMED",
-    |    "summary": "2D Platform Side Scrolling Action Game SS2",
-    |    "transp": "OPAQUE"
-    |  }]
-    |""".stripMargin
+val dateFormatterBuilder = new DateTimeFormatterBuilder()
 
 @main def main(): Unit = {
+  val optionalFormats = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'") ::
+    DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss") ::
+    DateTimeFormatter.ofPattern("yyyyMMdd") ::
+    Nil
+  optionalFormats.foreach(format => dateFormatterBuilder.appendOptional(format))
+  dateFormatterBuilder
+    .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
+    .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
+    .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
+
+  val formatter = dateFormatterBuilder.toFormatter
+
   val gameJamUrl = "http://www.indiegamejams.com/calfeed/index.php"
   val lessThanXDays = 4
-  val endDay = Instant.parse("2023-12-31T00:00:00.00Z")
+  val parsedEndDay = LocalDateTime.parse("20231231T170000Z", formatter)
+  val endDay = parsedEndDay.toInstant(ZoneOffset.UTC)
 
-  val gameJamList = fetchGameJams(gameJamUrl)
+  val gameJamList = fetchGameJams(url = gameJamUrl, formatter = formatter)
 
   val gameJamsOfXLength = gameJamList.filter(p => gameJamDayFilter(p, lessThanXDays))
   val gameJamsOfLengthAndInTimeInterval = gameJamsOfXLength.filter(p => gameJamPeriodFilter(p, Instant.now(), endDay))
@@ -42,18 +43,28 @@ val demoJSON =
   println(write(gameJamsOfLengthAndInTimeInterval.map(_.classToDto())))
 }
 
-def fetchGameJams(url: String): Array[GameJam] = {
+def fetchGameJams(url: String, formatter: DateTimeFormatter): Array[GameJam] = {
   implicit val formats: Formats = DefaultFormats
   val jsonBufferedString = Source.fromURL(url)
   val jsonString = jsonBufferedString.mkString
-  val json = parse(jsonString)
+  val json = parse(replaceDtstart(jsonString))
 
   def dtoMapper(dto: GameJamDTO): GameJam = {
     println(dto)
-    dto.dtoToClass()
+    dto.dtoToClass(formatter)
   }
 
   json.camelizeKeys.extract[Array[GameJamDTO]].map(dtoMapper)
+}
+
+def replaceDtstart(jsonString: String): String = {
+  val json = parse(jsonString)
+  val updatedJson = json.transformField {
+    case JField(key, value) if key.contains("dtstart") => ("dtstart", value)
+    case JField(key, value) if key.contains("dtend") => ("dtend", value)
+    case other => other
+  }
+  compact(render(updatedJson))
 }
 
 def gameJamDayFilter(gameJam: GameJam, lessThanXDays: Int): Boolean = {
@@ -77,35 +88,46 @@ case class GameJamDTO(dtstart: String,
                       sequence: String = "",
                       status: String = "",
                       summary: String = "",
-                      transp: String = ""
+                      transp: String = "",
                      ) {
-  def dtoToClass(): GameJam = new GameJam(
-    LocalDate.parse(dtstart),
-    LocalDate.parse(dtend),
-    dtstamp,
-    uid,
-    created,
-    description,
-    lastModified,
-    location,
-    sequence,
-    status,
-    summary,
-    transp
-  )
+  def dtoToClass(formatter: DateTimeFormatter): GameJam = {
+    val newDtStart =
+      try LocalDateTime.parse(dtstart, formatter)
+      catch case
+        _: DateTimeParseException => LocalDate.parse(dtstart, formatter).atStartOfDay()
 
-  override def toString(): String = {
+    val newDtEnd =
+      try LocalDateTime.parse(dtend, formatter)
+      catch case
+        _: DateTimeParseException => LocalDate.parse(dtend, formatter).atStartOfDay()
+    new GameJam(
+      newDtStart,
+      newDtEnd,
+      dtstamp,
+      uid,
+      created,
+      description,
+      lastModified,
+      location,
+      sequence,
+      status,
+      summary,
+      transp
+    )
+  }
+
+  override def toString: String = {
     s"""$uid
-      |$dtstart
-      |$dtend
-      |$description
-      |""".stripMargin
+       |$dtstart
+       |$dtend
+       |$description
+       |""".stripMargin
   }
 }
 
 class GameJam(
-               val dtstart: LocalDate,
-               val dtend: LocalDate,
+               val dtstart: LocalDateTime,
+               val dtend: LocalDateTime,
                val dtstamp: String,
                val uid: String,
                val created: String,
@@ -118,9 +140,10 @@ class GameJam(
                val transp: String
              ) {
   val duration: Duration = Duration.between(dtend, dtstart)
+
   def classToDto(): GameJamDTO = GameJamDTO(
-    dtstart.format(ISO_LOCAL_DATE),
-    dtend.format(ISO_LOCAL_DATE),
+    dtstart.toString,
+    dtend.toString,
     dtstamp,
     uid,
     created,
