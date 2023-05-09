@@ -1,3 +1,4 @@
+import Model.*
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.json4s.*
 import org.json4s.JsonDSL.WithDouble.*
@@ -5,33 +6,31 @@ import org.json4s.jackson.JsonMethods.*
 import org.json4s.jackson.Serialization
 import org.json4s.jackson.Serialization.{read, write}
 
+import java.io.{File, PrintWriter}
 import java.text.SimpleDateFormat
 import java.time.*
 import java.time.format.DateTimeFormatter.*
 import java.time.format.{DateTimeFormatter, DateTimeFormatterBuilder, DateTimeParseException}
 import java.time.temporal.ChronoField
+import java.time.temporal.TemporalAdjusters.lastDayOfYear
 import java.util.Date
 import scala.annotation.targetName
 import scala.io.Source
 
 val dateFormatterBuilder = new DateTimeFormatterBuilder()
 
-@main def main(): Unit = {
-  val optionalFormats = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'") ::
-    DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss") ::
-    DateTimeFormatter.ofPattern("yyyyMMdd") ::
-    Nil
-  optionalFormats.foreach(format => dateFormatterBuilder.appendOptional(format))
-  dateFormatterBuilder
-    .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
-    .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
-    .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
+@main def main(url: String, lessThanDays: String, beforeDate: String, other: String*): Unit = {
 
+  val optionalFormats = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'") :: DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss") :: DateTimeFormatter.ofPattern("yyyyMMdd") :: Nil
+  optionalFormats.foreach(format => dateFormatterBuilder.appendOptional(format))
+  dateFormatterBuilder.parseDefaulting(ChronoField.HOUR_OF_DAY, 0).parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0).parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
   val formatter = dateFormatterBuilder.toFormatter
 
-  val gameJamUrl = "http://www.indiegamejams.com/calfeed/index.php"
-  val lessThanXDays = 4
-  val parsedEndDay = LocalDateTime.parse("20231231T170000Z", formatter)
+
+  val gameJamUrl = if (url.nonEmpty) url else "http://www.indiegamejams.com/calfeed/index.php"
+  val lessThanXDays = if (lessThanDays.nonEmpty) lessThanDays.toInt else 4
+  val endDate = if (beforeDate.nonEmpty) beforeDate else formatter.format(LocalDate.now().`with`(lastDayOfYear))
+  val parsedEndDay = LocalDateTime.parse(endDate, formatter)
   val endDay = parsedEndDay.toInstant(ZoneOffset.UTC)
 
   val gameJamList = fetchGameJams(url = gameJamUrl, formatter = formatter)
@@ -40,7 +39,10 @@ val dateFormatterBuilder = new DateTimeFormatterBuilder()
   val gameJamsOfLengthAndInTimeInterval = gameJamsOfXLength.filter(p => gameJamPeriodFilter(p, Instant.now(), endDay))
 
   implicit val formats: Formats = Serialization.formats(NoTypeHints)
-  println(write(gameJamsOfLengthAndInTimeInterval.map(_.classToDto())))
+  val file = new File("gameJams.json")
+  val pw = new PrintWriter(file)
+  pw.write(write(gameJamsOfLengthAndInTimeInterval.map(_.classToDto())))
+  pw.close()
 }
 
 def fetchGameJams(url: String, formatter: DateTimeFormatter): Array[GameJam] = {
@@ -50,7 +52,6 @@ def fetchGameJams(url: String, formatter: DateTimeFormatter): Array[GameJam] = {
   val json = parse(replaceDtstart(jsonString))
 
   def dtoMapper(dto: GameJamDTO): GameJam = {
-    println(dto)
     dto.dtoToClass(formatter)
   }
 
@@ -59,10 +60,9 @@ def fetchGameJams(url: String, formatter: DateTimeFormatter): Array[GameJam] = {
 
 def replaceDtstart(jsonString: String): String = {
   val json = parse(jsonString)
-  val updatedJson = json.transformField {
-    case JField(key, value) if key.contains("dtstart") => ("dtstart", value)
-    case JField(key, value) if key.contains("dtend") => ("dtend", value)
-    case other => other
+  val updatedJson = json.transformField { case JField(key, value) if key.contains("dtstart") => ("dtstart", value)
+  case JField(key, value) if key.contains("dtend") => ("dtend", value)
+  case other => other
   }
   compact(render(updatedJson))
 }
@@ -74,85 +74,5 @@ def gameJamDayFilter(gameJam: GameJam, lessThanXDays: Int): Boolean = {
   gameJam.duration.compareTo(xDayDuration) <= 0
 }
 
-def gameJamPeriodFilter(gameJam: GameJam, startDate: Instant, endDate: Instant): Boolean =
-  Instant.from(gameJam.dtstart).isAfter(startDate) && Instant.from(gameJam.dtend).isBefore(endDate)
+def gameJamPeriodFilter(gameJam: GameJam, startDate: Instant, endDate: Instant): Boolean = gameJam.dtstart.toInstant(ZoneOffset.UTC).isAfter(startDate) && gameJam.dtend.toInstant(ZoneOffset.UTC).isBefore(endDate)
 
-case class GameJamDTO(dtstart: String,
-                      dtend: String,
-                      dtstamp: String = "",
-                      uid: String = "",
-                      created: String = "",
-                      description: String,
-                      lastModified: String = "",
-                      location: String = "",
-                      sequence: String = "",
-                      status: String = "",
-                      summary: String = "",
-                      transp: String = "",
-                     ) {
-  def dtoToClass(formatter: DateTimeFormatter): GameJam = {
-    val newDtStart =
-      try LocalDateTime.parse(dtstart, formatter)
-      catch case
-        _: DateTimeParseException => LocalDate.parse(dtstart, formatter).atStartOfDay()
-
-    val newDtEnd =
-      try LocalDateTime.parse(dtend, formatter)
-      catch case
-        _: DateTimeParseException => LocalDate.parse(dtend, formatter).atStartOfDay()
-    new GameJam(
-      newDtStart,
-      newDtEnd,
-      dtstamp,
-      uid,
-      created,
-      description,
-      lastModified,
-      location,
-      sequence,
-      status,
-      summary,
-      transp
-    )
-  }
-
-  override def toString: String = {
-    s"""$uid
-       |$dtstart
-       |$dtend
-       |$description
-       |""".stripMargin
-  }
-}
-
-class GameJam(
-               val dtstart: LocalDateTime,
-               val dtend: LocalDateTime,
-               val dtstamp: String,
-               val uid: String,
-               val created: String,
-               val description: String,
-               val lastModified: String,
-               val location: String,
-               val sequence: String,
-               val status: String,
-               val summary: String,
-               val transp: String
-             ) {
-  val duration: Duration = Duration.between(dtend, dtstart)
-
-  def classToDto(): GameJamDTO = GameJamDTO(
-    dtstart.toString,
-    dtend.toString,
-    dtstamp,
-    uid,
-    created,
-    description,
-    lastModified,
-    location,
-    sequence,
-    status,
-    summary,
-    transp
-  )
-}

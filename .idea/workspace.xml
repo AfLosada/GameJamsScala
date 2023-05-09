@@ -4,9 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="a9292a22-6d5f-42e4-9f0b-32300acad515" name="Changes" comment="[NS] Testing action">
-      <change beforePath="$PROJECT_DIR$/.bsp/sbt.json" beforeDir="false" afterPath="$PROJECT_DIR$/.bsp/sbt.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="a9292a22-6d5f-42e4-9f0b-32300acad515" name="Changes" comment="[NS] Finalizing date parsing">
+      <change afterPath="$PROJECT_DIR$/src/main/scala/Model/GameJam.scala" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/scala/Model/GameJamDTO.scala" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.github/workflows/scala.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/scala.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/scala/GameJamDatesParser.scala" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/scala/GameJamDatesParser.scala" afterDir="false" />
     </list>
@@ -19,6 +20,13 @@
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
     </projectState>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -36,23 +44,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "master",
-    "ignore.virus.scanning.warn.message": "true",
-    "project.structure.last.edited": "SDKs",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2",
-    "settings.editor.selected.configurable": "reference.settingsdialog.project.gradle"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.sourceCode.Scala&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="main" type="Application" factoryName="Application" temporary="true">
       <option name="MAIN_CLASS_NAME" value="main" />
       <module name="GameJamsScala" />
+      <option name="PROGRAM_PARAMETERS" value="&quot;&quot; &quot;&quot; &quot;&quot;" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -82,7 +91,14 @@
       <option name="project" value="LOCAL" />
       <updated>1683255170512</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="[NS] Finalizing date parsing">
+      <created>1683601762063</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1683601762063</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -130,16 +146,17 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="[NS] Testing action" />
-    <option name="LAST_COMMIT_MESSAGE" value="[NS] Testing action" />
+    <MESSAGE value="[NS] Finalizing date parsing" />
+    <option name="LAST_COMMIT_MESSAGE" value="[NS] Finalizing date parsing" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="scala-line">
-          <condition expression="dtstart == &quot;20140711T120000&quot;" language="Scala" />
+          <condition expression="gameJam.dtstart == &quot;20140720T120000&quot; || gameJam.dtstart == &quot;20140719T120000&quot;" language="Scala" />
           <url>file://$PROJECT_DIR$/src/main/scala/GameJamDatesParser.scala</url>
-          <line>94</line>
-          <option name="timeStamp" value="2" />
+          <line>76</line>
+          <option name="timeStamp" value="4" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
